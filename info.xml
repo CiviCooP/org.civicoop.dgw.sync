@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<extension key="org.civicoop.dgw.sync" type="module">
+  <file>sync</file>
+  <name>Synchronization CiviCRM De Goede Woning</name>
+  <description>Synchronization between CiviCRM and other software using the API for De Goede Woning. Requires extension General Customization De Goede Woning</description>
+  <license>Academic Free Lincense 3.0</license>
+  <maintainer>
+    <author>CiviCooP</author>
+    <email>helpdesk@civicoop.org</email>
+  </maintainer>
+  <releaseDate>2013-05-06</releaseDate>
+  <version>1.0</version>
+  <develStage>beta</develStage>
+  <compatibility>
+    <ver>4.3</ver>
+  </compatibility>
+  <comments>Extension is being developed and tested</comments>
+  <civix>
+    <namespace>CRM/Sync</namespace>
+  </civix>
+</extension>
