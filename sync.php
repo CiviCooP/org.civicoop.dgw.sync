@@ -1,4 +1,13 @@
 <?php
+/*-----------------------------------------------------------------------+
+ * BOS1402692 If an update for entity occurs, check if we still have an
+ * active insert for the entity in the sync table. If this is the case,
+ * no additional syn is required. NCCW will pull the latest data and process 
+ * correctly
+ * 
+ * Erik Hommel (CiviCooP) <erik.hommel@civicoop.org>
+ * 13 Mar 2014
+ +----------------------------------------------------------------------*/
 
 require_once 'sync.civix.php';
 
@@ -249,7 +258,7 @@ function sync_civicrm_pre( $op, $objectName, $objectId, &$objectRef ) {
  *
  * @author Erik Hommel (erik.hommel@civicoop.org)
  *
- * - synchronization for crate operation
+ * - synchronization for create operation
  *
  */
 function sync_civicrm_post($op, $objectName, $objectId, &$objectRef) {
@@ -323,6 +332,61 @@ function _checkSyncRequired($op, $objectName, $objectId, $objectRef) {
         if (isset($resultCheck['is_error']) && $resultCheck['is_error'] == 1) {
             return $syncRequired;
         }
+        /*
+         * BOS1402692 - sync not required if action = update and still an active
+         * insert in sync table (new data will be handled by insert processing)
+         */
+        if ($op == "edit") {
+            if ($objectName == "Individual" || $objectName == "Organization") {
+                $checkEntity = "contact";
+                $contactId = $objectId;
+            } else {
+                $checkEntity = strtolower($objectName);
+                $contactId = $objectRef['contact_id'];
+            }
+            $syncTableParams = array(
+                'name'  =>  "Synchronisatie_First_Noa",
+            );
+            try {
+                $syncTable = civicrm_api3('CustomGroup', 'Getsingle', $syncTableParams);
+                $syncTableName = $syncTable['table_name'];
+                $syncTableId = $syncTable['id'];
+            } catch (CiviCRM_API3_Exception $e) {
+                CRM_Core_Error::fatal("Synchronisatietabel First Noa niet gevonden, 
+                    foutboodschap van API CustomGroup Getsingle : ".$e->getMessage());
+            }
+            $entityFldParams = array(
+                'custom_group_id'   =>  $syncTableId,
+                'name'              =>  "entity",
+                'return'            =>  "column_name"
+            );
+            try {
+                $entityColumnName = civicrm_api3('CustomField', 'Getvalue', $entityFldParams);
+            } catch (CiviCRM_API3_Exception $e) {
+                CRM_Core_Error::fatal("Geen veld gevonden voor entity in tabel Synchronisatie_First_Noa, 
+                    foutboodschap van API CustomField Getvalue : ".$e->getMessage());                
+            }
+            $actionFldParams = array(
+                'custom_group_id'   =>  $syncTableId,
+                'name'              =>  "action",
+                'return'            =>  "column_name"
+            );
+            try {
+                $actionColumnName = civicrm_api3('CustomField', 'Getvalue', $actionFldParams);
+            } catch (CiviCRM_API3_Exception $e) {
+                CRM_Core_Error::fatal("Geen veld gevonden voor entity in tabel Synchronisatie_First_Noa, 
+                    foutboodschap van API CustomField Getvalue : ".$e->getMessage());                
+            }
+            $checkInsertQry = "SELECT count(*) AS countInsert FROM $syncTableName 
+                WHERE entity_id = $contactId AND $entityColumnName = '$checkEntity' AND $actionColumnName = 'ins'";
+            $checkInsertDao = CRM_Core_DAO::executeQuery($checkInsertQry);
+            if ($checkInsertDao->fetch()) {
+                if ($checkInsertDao->countInsert > 0) {
+                    return FALSE;
+                }
+            }
+        }
+        
         /**
          * check fields in object against database fields depending on object
          * and handle the discrepancy between objecRef as object and as array
@@ -956,7 +1020,9 @@ function _syncFirstObject( $op, $objectId, $contactId, $objectName ) {
         $resultSync = _setSyncRecord(  $op, $contactId, $objectId, $objectName );
     }
     /*
-     * add contact to synchronization group
+     * add contact to synchronization group:
+     * - if insert action
+     * - if update/delete and persoonsnummer_first is set
      */
     _addContactSyncGroup( $contactId );
     $result['is_error'] = 0;
