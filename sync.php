@@ -261,7 +261,7 @@ function sync_civicrm_pre( $op, $objectName, $objectId, &$objectRef ) {
  * - synchronization for create operation
  *
  */
-function sync_civicrm_post($op, $objectName, $objectId, &$objectRef) {
+function  sync_civicrm_post($op, $objectName, $objectId, &$objectRef) {
     /**
      * only for some objects
      */
@@ -274,6 +274,7 @@ function sync_civicrm_post($op, $objectName, $objectId, &$objectRef) {
          * only if one of selected objects
          */
         if (in_array($objectName, $syncedObjects)) {
+          if (_sync_owner_is_household($objectName, $objectRef) == FALSE) {
             /**
              * skip execution if hook originates from API De Goede Woning
              */
@@ -295,9 +296,52 @@ function sync_civicrm_post($op, $objectName, $objectId, &$objectRef) {
                 }
                 $syncResult = _syncFirstObject($op, $objectId, $contactId, $objectName);
             }
+          }
         }
     }
     return;
+}
+/**
+ * Function to check if owner contact of email, address or phone is 
+ * household. If that is the case, no synching
+ * BOS14111147
+ * 
+ * @author Erik Hommel (CiviCooP) <erik.hommel@civicoop.org>
+ * @date 27 Nov 2014
+ * @param string $object_name
+ * @param object $object_ref
+ * @return boolean
+ */
+function _sync_owner_is_household($object_name, $object_ref) {
+  $object_names_to_be_checked = array('Email', 'Address', 'Phone');
+  if (in_array($object_name, $object_names_to_be_checked)) {
+    if (isset($object_ref->contact_id) && !empty($object_ref->contact_id)) {
+      return _sync_contact_is_household($object_ref->contact_id);
+    }
+  }
+  return FALSE;
+}
+/**
+ * Function to check if contact is of type Household
+ * 
+ * @author Erik Hommel (CiviCooP) <erik.hommel@civicoop.org>
+ * @date 27 Nov 2014
+ * @param int $contact_id
+ * @return boolean
+ */
+function _sync_contact_is_household($contact_id) {
+  $params = array(
+    'id' => $contact_id,
+    'return' => 'contact_type');
+  try {
+    $contact_type = civicrm_api3('Contact', 'Getvalue', $params);
+    if ($contact_type == 'Household') {
+      return TRUE;
+    }
+  } catch (CiviCRM_API3_Exception $ex) {
+    return FALSE;
+  }
+  return FALSE;
 }
 /**
  * Function to check if synchronization is required
