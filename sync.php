@@ -203,7 +203,12 @@ function sync_civicrm_pre( $op, $objectName, $objectId, &$objectRef ) {
         /**
          * only if one of selected objects
          */
-        if (in_array($objectName, $syncedObjects)) {
+        if (in_array($objectName, $syncedObjects)) {          
+          /*
+           * BOS14111147 check if owner (for email/address/phone) is household
+           */
+          if (_sync_owner_is_household($objectName, $objectRef) == FALSE) {
+
             /**
              * skip execution if hook originates from API De Goede Woning
              */
@@ -249,6 +254,7 @@ function sync_civicrm_pre( $op, $objectName, $objectId, &$objectRef ) {
                     $syncResult = _syncFirstObject($op, $objectId, $contactId, $objectName);
                 }
             }
+          }  
         }
     }
     return;
@@ -274,6 +280,9 @@ function  sync_civicrm_post($op, $objectName, $objectId, &$objectRef) {
          * only if one of selected objects
          */
         if (in_array($objectName, $syncedObjects)) {
+          /*
+           * BOS14111147 check if owner (for email/address/phone) is household
+           */
           if (_sync_owner_is_household($objectName, $objectRef) == FALSE) {
             /**
              * skip execution if hook originates from API De Goede Woning
