@@ -782,9 +782,12 @@ function _checkSyncRequired($op, $objectName, $objectId, $objectRef) {
 }
 /**
  * Function to check if object exists in First Noa
+ *
+ *
  * @author Erik Hommel (erik.hommel@civicoop.org)
- * @param $objectName, $objectId
- * @return $objectInFirst (boolean)
+ * @param string $objectName
+ * @param int $objectId
+ * @return bool $objectInFirst
  */
 function _checkObjectInFirst( $objectName, $objectId ) {
     $objectInFirst = false;
@@ -811,6 +814,14 @@ function _checkObjectInFirst( $objectName, $objectId ) {
     if ( $retrieveSyncField['is_error'] == 0 ) {
         $entityIdFldName = $retrieveSyncField['sync_field'];
     }
+    $retrieveSyncField = _retrieveSyncField( 'sync first key_first veld');
+    if ( $retrieveSyncField['is_error'] == 0 ) {
+      $keyFirstFldName = $retrieveSyncField['sync_field'];
+    }
+    $retrieveSyncField = _retrieveSyncField( 'sync first action veld');
+    if ( $retrieveSyncField['is_error'] == 0 ) {
+      $actionFldName = $retrieveSyncField['sync_field'];
+    }
     require_once 'CRM/Utils/DgwUtils.php';
     $customTableTitle = CRM_Utils_DgwUtils::getDgwConfigValue( 'synchronisatietabel first' );
     $customTable = CRM_Utils_DgwUtils::getCustomGroupTableName( $customTableTitle );
@@ -820,6 +831,12 @@ function _checkObjectInFirst( $objectName, $objectId ) {
     if ( $daoSync->fetch() ) {
         if ( $daoSync->aantal > 0 ) {
             $objectInFirst = true;
+        } else {
+          /*
+           * BOS1307645\01 if no record found, check if there SHOULD be a record based on persoonsnummer first
+           */
+          $objectInFirst = CRM_Utils_SyncUtils::correctSyncRecord($objectName, $objectId, $customTable,
+            $entityFldName, $actionFldName, $entityIdFldName, $keyFirstFldName);
         }
     }
     return $objectInFirst;
@@ -827,7 +844,7 @@ function _checkObjectInFirst( $objectName, $objectId ) {
 /**
  * Function to add contact to group for synchronization First Noa
  * @author Erik Hommel (erik.hommel@civicoop.org)
- * @param $params with contact_id
+ * @param int $contactId
  * @return none
  */
 function _addContactSyncGroup( $contactId ) {
