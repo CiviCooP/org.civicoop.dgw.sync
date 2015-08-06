@@ -188,4 +188,71 @@ class CRM_Utils_SyncUtils {
     return $persoonsnummerFirst;
   }
 
+  /**
+   * BOS1508100 Method to delete record from sync table
+   *
+   * @param $params
+   * @access public
+   * @static
+   */
+  public static function deleteSyncRecord($params) {
+    if (empty($params['entity']) || empty($params['entity_id'])) {
+      return;
+    }
+    $syncTable = self::getSyncTable();
+    $syncFields = self::getSyncFields($syncTable['id']);
+    foreach ($syncFields as $syncField) {
+      if ($syncField['name'] == 'entity') {
+        $entityColumn = $syncField['column_name'];
+      }
+      if ($syncField['name'] == 'entity_id') {
+        $entityIdColumn = $syncField['column_name'];
+      }
+    }
+    if (empty($entityColumn) || empty($entityIdColumn)) {
+      return;
+    }
+    $deleteQuery = 'DELETE FROM '.$syncTable['table_name'].' WHERE '.$entityColumn.' = %1 AND '.$entityIdColumn.' = %2';
+    $deleteParams = array(
+      1 => array($params['entity'], 'String'),
+      2 => array($params['entity_id'], 'Integer'));
+
+    CRM_Core_DAO::executeQuery($deleteQuery, $deleteParams);
+  }
+
+  /**
+   * Method to retrieve sync table name
+   *
+   * @return array
+   * @throws Exception when API error
+   * @access public
+   * @static
+   */
+  public static function getSyncTable() {
+    try {
+      return civicrm_api3('CustomGroup', 'Getsingle', array('name' => "Synchronisatie_First_Noa"));
+    } catch (CiviCRM_API3_Exception $ex) {
+      throw new Exception('Kan geen custom group vinden met naam Synchronisatie_First_Noa,
+      neem contact op met je CiviCRM beheerder! Error from API CustomGroup Getvalue : '.$ex->getMessage());
+    }
+  }
+
+  /**
+   * Method to retrieve sync fields
+
+   * @param $customGroupId
+   * @return array
+   * @throws Exception when API error
+   * @access public
+   * @static
+   */
+  public static function getSyncFields($customGroupId) {
+    try {
+      $customFields = civicrm_api3('CustomField', 'Get', array('custom_group_id' => $customGroupId));
+      return $customFields['values'];
+    } catch (CiviCRM_API3_Exception $ex) {
+      throw new Exception('Kan geen custom fields vinden in de custom groep met naam Synchronisatie_First_Noa,
+      neem contact op met je CiviCRM beheerder! Error from API CustomField Get : '.$ex->getMessage());
+    }
+  }
 }
