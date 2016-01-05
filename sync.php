@@ -206,8 +206,9 @@ function sync_civicrm_pre( $op, $objectName, $objectId, &$objectRef ) {
         if (in_array($objectName, $syncedObjects)) {          
           /*
            * BOS14111147 check if owner (for email/address/phone) is household
+           * BOS1601095 pass objectId and not objectRef because ref is empty on delete
            */
-          if (_sync_owner_is_household($objectName, $objectRef) == FALSE) {
+            if (_sync_owner_is_household($objectName, $objectRef, $objectId) == FALSE) {
 
             /**
              * skip execution if hook originates from API De Goede Woning
@@ -282,8 +283,9 @@ function  sync_civicrm_post($op, $objectName, $objectId, &$objectRef) {
         if (in_array($objectName, $syncedObjects)) {
           /*
            * BOS14111147 check if owner (for email/address/phone) is household
+           * BOS1601095 pass objectId too because ref is empty on delete
            */
-          if (_sync_owner_is_household($objectName, $objectRef) == FALSE) {
+          if (_sync_owner_is_household($objectName, $objectRef, $objectId) == FALSE) {
             /**
              * skip execution if hook originates from API De Goede Woning
              */
@@ -319,13 +321,29 @@ function  sync_civicrm_post($op, $objectName, $objectId, &$objectRef) {
  * @date 27 Nov 2014
  * @param string $object_name
  * @param object $object_ref
+ * @param int $object_id
  * @return boolean
  */
-function _sync_owner_is_household($object_name, $object_ref) {
+function _sync_owner_is_household($object_name, $object_ref, $object_id = NULL) {
   $object_names_to_be_checked = array('Email', 'Address', 'Phone');
   if (in_array($object_name, $object_names_to_be_checked)) {
-    if (isset($object_ref->contact_id) && !empty($object_ref->contact_id)) {
-      return _sync_contact_is_household($object_ref->contact_id);
+    if (isset($object_id) && !empty($object_id)) {
+      try {
+        $entity = civicrm_api3($object_name, 'Getsingle', array('id' => $object_id));
+        if (isset($entity['contact_id']) && !empty($entity['contact_id'])) {
+          return _sync_contact_is_household($entity['contact_id']);
+        } else {
+          return FALSE;
+        }
+      } catch(CiviCRM_API3_Exception $ex) {
+        return FALSE;
+      }
+    } else {
+      if (isset($object_ref->contact_id) && !empty($object_ref->contact_id)) {
+        return _sync_contact_is_household($object_ref->contact_id);
+      } else {
+        return FALSE;
+      }
     }
   }
   return FALSE;
