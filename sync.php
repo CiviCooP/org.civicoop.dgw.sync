@@ -858,11 +858,10 @@ function _addContactSyncGroup( $contactId ) {
         $groupData = civicrm_api( 'Group', 'Getsingle', $groupParams );
         if ( !isset( $groupData['is_error'] ) || $groupData['is_error'] == 0 ) {
             $addParams = array(
-                'version'       =>  3,
                 'contact_id'    =>  $contactId,
                 'group_id'      =>  $groupData['id']
             );
-            $addResult = civicrm_api( 'GroupContact', 'Create', $addParams );
+            $addResult = civicrm_api3( 'GroupContact', 'Create', $addParams );
         }
     }
     return;
