@@ -148,7 +148,12 @@ class CRM_Utils_SyncUtils {
    * @static
    */
   public static function contactHasPersoonsnummerFirst($contactId, $objectName) {
-    CRM_Core_Error::debug('contact_id', $contactId);
+    /**
+     * BOSW1511163 insite - namen wijzigen
+     * The CRM_Core_Error::debug('contact_id', $contactId); gives a conflict with the ajax call, 
+     * when changing the first_name, middle_name or last_name
+     */
+    //CRM_Core_Error::debug('contact_id', $contactId);
     $persoonsnummerFirst = null;
     switch ($objectName) {
       case 'Individual':
